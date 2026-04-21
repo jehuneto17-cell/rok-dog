@@ -346,15 +346,16 @@ html,body{height:100%;font-family:'Nunito',sans-serif;background:#1A1A1A;display
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyBfj6sE2OUPsyql6FeCqQ1Om01NYt_C2Ds",
-  authDomain: "rok-dog.firebaseapp.com",
-  projectId: "rok-dog",
-  storageBucket: "rok-dog.firebasestorage.app",
-  messagingSenderId: "871134435015",
-  appId: "1:871134435015:web:d9b4473fb522b55ecb10e2",
-  measurementId: "G-PH6STFBGNY"
+  apiKey: "AIzaSyClMicu03TL4VNTx1vac_Ff4JLrtfeg0LU",
+  authDomain: "rog-dog-auth.firebaseapp.com",
+  projectId: "rog-dog-auth",
+  storageBucket: "rog-dog-auth.firebasestorage.app",
+  messagingSenderId: "557998057701",
+  appId: "1:557998057701:web:f2a45965c5b5ed7a908c0c",
+  measurementId: "G-RD8BT5FEJZ"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -694,7 +695,7 @@ const db = firebase.firestore();
 /* ═══════════════════════════════════════
    DEFAULTS
 ═══════════════════════════════════════ */
-const DEF_CFG={storeName:"Rok Dog",tagline:"O melhor cachorro-quente da cidade! 🌭",whatsapp:"5535992264478",deliveryFee:5,logoEmoji:"🌭",adminUser:"admin",adminPass:"Rd@2026",banners:[]};
+const DEF_CFG={storeName:"Rok Dog",tagline:"O melhor cachorro-quente da cidade! 🌭",whatsapp:"5535992264478",deliveryFee:5,logoEmoji:"🌭",adminUser:"RokDog@26gmail.com",banners:[]};
 const DEF_CATS=[
   {id:1,name:"Rock Dogs",emoji:"🌭",active:true},
   {id:2,name:"Bebidas",emoji:"🥤",active:true}
@@ -837,22 +838,29 @@ function goTo(id){
 /* ═══════════════════════════════════════
    LOGIN
 ═══════════════════════════════════════ */
-function doLogin(){
+async function doLogin(){
   const u=document.getElementById('li-user').value.trim();
   const p=document.getElementById('li-pass').value;
   const err=document.getElementById('login-err');
-  if(u===(cfg.adminUser||'admin')&&p===(cfg.adminPass||'rokdog123')){
-    err.textContent='';
+  const btn=document.querySelector('.login-btn');
+  err.textContent='';
+  btn.disabled=true; btn.textContent='Entrando...';
+  try {
+    // O e-mail pode ser digitado direto ou usar o campo usuário como prefixo
+    const email = u.includes('@') ? u : (cfg.adminUser||'admin@rokdog.com');
+    await firebase.auth().signInWithEmailAndPassword(email, p);
     admLoggedIn=true;
     document.getElementById('li-pass').value='';
     goTo('admin');
-  } else {
+  } catch(e) {
     err.textContent='❌ Usuário ou senha incorretos';
     document.getElementById('li-pass').classList.add('err');
     setTimeout(()=>document.getElementById('li-pass').classList.remove('err'),500);
+  } finally {
+    btn.disabled=false; btn.textContent='Entrar no Painel';
   }
 }
-function doLogout(){admLoggedIn=false;}
+function doLogout(){admLoggedIn=false; firebase.auth().signOut();}
 
 /* ═══════════════════════════════════════
    ADMIN TABS
@@ -1015,8 +1023,13 @@ async function saveCfg(){
   const cp=document.getElementById('cfg-confpass').value;
   if(np||cp){
     if(np!==cp){toast('❗ As senhas não conferem!');return;}
-    if(np.length<4){toast('❗ Senha muito curta (mínimo 4 caracteres)!');return;}
-    cfg.adminPass=np;
+    if(np.length<6){toast('❗ Senha muito curta (mínimo 6 caracteres)!');return;}
+    // Atualiza a senha no Firebase Authentication
+    const user=firebase.auth().currentUser;
+    if(user){
+      try{ await user.updatePassword(np); }
+      catch(e){ toast('❗ Erro ao alterar senha: '+e.message); return; }
+    }
   }
   cfg.storeName=document.getElementById('cfg-name').value.trim()||'Rok Dog';
   cfg.tagline=document.getElementById('cfg-tag').value.trim();
